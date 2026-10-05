@@ -11,7 +11,7 @@ st.title("📍 Real-Time Pricing Dashboard")
 with st.sidebar:
     st.header("⚙️ Settings & Activity")
     
-    # NEW: Multi-select for surrounding areas
+    # Multi-select for surrounding areas
     zip_codes = st.multiselect("Zip Codes to Track", 
                                ["13421", "13461", "13476", "13478", "13322"], 
                                default=["13421", "13461"])
@@ -22,10 +22,15 @@ with st.sidebar:
     my_sqft = st.number_input("My Square Footage", value=1800, step=50)
     my_dom = st.number_input("My Days on Market", value=21, step=1)
     
-    # NEW: Condition tier selector
-    property_tier = st.selectbox("My Home's Condition", 
-                                 ["Average (Standard Comps)", "Premium / Renovated (Top 25% Comps)"],
-                                 index=1)
+    # NEW: Condition tier selector with a Help Tooltip
+    property_tier = st.selectbox(
+        "My Home's Condition", 
+        ["Average (Standard Comps)", "Premium / Renovated (Top 25% Comps)"],
+        index=1,
+        help="**Average:** Compares your home to the median (50th percentile) market values.\n\n**Premium:** Ignores fixer-uppers and compares your home only to the Top 25% (75th percentile) of the market. Use this if your home is newly renovated or highly upgraded."
+    )
+    # NEW: Permanent visible caption below the box
+    st.caption("✨ *The Premium Tier evaluates your home against the top 25% of local properties, filtering out lower-end homes to accurately reflect recent renovations.*")
     
     st.markdown("---")
     st.subheader("🚶‍♂️ Foot Traffic")
@@ -62,7 +67,7 @@ if not df_active.empty and not df_pending.empty:
     df_active = df_active.dropna(subset=['squareFootage'])
     df_pending = df_pending.dropna(subset=['squareFootage'])
     
-    # NEW: Calculate Price per SqFt for the market
+    # Calculate Price per SqFt for the market
     df_active['price_per_sqft'] = df_active['price'] / df_active['squareFootage']
     df_pending['price_per_sqft'] = df_pending['price'] / df_pending['squareFootage']
     
@@ -90,7 +95,7 @@ if not df_active.empty and not df_pending.empty:
     
     st.divider()
     
-    # --- NEW: Premium Pricing Analysis ---
+    # --- Premium Pricing Analysis ---
     st.subheader("💎 Premium Pricing Analysis")
     col_p1, col_p2, col_p3 = st.columns(3)
     col_p1.metric("My Price / SqFt", f"${my_ppsqft:,.0f}")
@@ -140,7 +145,6 @@ if not df_active.empty and not df_pending.empty:
     
     # --- Data Tables ---
     st.subheader("Active Competitors")
-    # Added price_per_sqft to the tables so you can easily spot the outliers
     st.dataframe(df_active[['formattedAddress', 'price', 'price_per_sqft', 'daysOnMarket', 'bedrooms', 'squareFootage']].sort_values('price'))
     
     st.subheader("Pending Sales")
