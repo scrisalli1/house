@@ -4,7 +4,9 @@ import requests
 
 ZIP_CODE = "13421"
 API_URL = "https://api.rentcast.io/v1/listings/sale"
-API_KEY = "fee61856a78b4d0484d5de3202759754"
+
+# This securely pulls your API key from the Streamlit Secrets box
+API_KEY = st.secrets["RENTCAST_API_KEY"]
 
 st.set_page_config(page_title="Oneida Real Estate Tracker", layout="wide")
 st.title(f"📍 Real-Time Pricing Dashboard: Oneida, NY ({ZIP_CODE})")
@@ -25,7 +27,7 @@ def fetch_listings(status, key):
     if response.status_code == 200:
         return pd.DataFrame(response.json())
     else:
-        # This new line will print the exact error directly on your dashboard
+        # This will print the exact error directly on your dashboard if the API fails
         st.error(f"API Error for {status} listings: {response.status_code} - {response.text}")
         return pd.DataFrame()
 
@@ -69,4 +71,4 @@ if not df_active.empty and not df_pending.empty:
     st.subheader("Pending Sales")
     st.dataframe(df_pending[['formattedAddress', 'price', 'daysOnMarket', 'bedrooms', 'squareFootage']].sort_values('price'))
 else:
-    st.warning("No listings found or error connecting to the API.")
+    st.warning("No listings found. Please check the red error messages above if the API connection failed.")
