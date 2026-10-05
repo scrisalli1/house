@@ -21,9 +21,13 @@ def fetch_listings(status, key):
     headers = {"X-Api-Key": key, "accept": "application/json"}
     params = {"zipCode": ZIP_CODE, "status": status, "propertyType": "Single Family", "limit": 100}
     response = requests.get(API_URL, headers=headers, params=params)
+    
     if response.status_code == 200:
         return pd.DataFrame(response.json())
-    return pd.DataFrame()
+    else:
+        # This new line will print the exact error directly on your dashboard
+        st.error(f"API Error for {status} listings: {response.status_code} - {response.text}")
+        return pd.DataFrame()
 
 with st.spinner("Fetching live MLS data..."):
     df_active = fetch_listings("Active", API_KEY)
