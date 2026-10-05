@@ -9,7 +9,7 @@ st.set_page_config(page_title="Upstate NY Real Estate Tracker", layout="wide")
 st.title("📍 Real-Time Pricing Dashboard")
 
 with st.sidebar:
-    st.header("⚙️ Settings & Activity")
+    st.header("⚙️️ Settings & Activity")
     zip_codes = st.multiselect("Zip Codes to Track", 
                                ["13421", "13461", "13476", "13478", "13322"], 
                                default=["13421", "13461"])
@@ -85,22 +85,42 @@ if not df_active.empty and not df_pending.empty:
     col4.metric(f"{tier_label} Pending Price", f"${df_pending['price'].quantile(0.75) if 'Premium' in property_tier else df_pending['price'].median():,.0f}")
     
     st.divider()
+
+    # --- NEW: LIVE MARKET VISUALIZATION ---
+    st.subheader("📈 Live Market Positioning")
+    st.markdown("This scatter plot maps Price against Square Footage. Look for the **My Home** indicator to see exactly where you sit relative to the active competition.")
     
-    # --- NEW: Price Drop Leaderboard ---
+    plot_active = df_active[['price', 'squareFootage']].copy()
+    plot_active['Status'] = 'Active'
+    
+    plot_pending = df_pending[['price', 'squareFootage']].copy()
+    plot_pending['Status'] = 'Pending'
+    
+    my_property = pd.DataFrame([{'price': my_price, 'squareFootage': my_sqft, 'Status': 'My Home'}])
+    
+    df_plot = pd.concat([plot_active, plot_pending, my_property], ignore_index=True)
+    
+    # Render Streamlit Native Scatter Chart
+    st.scatter_chart(
+        df_plot,
+        x='squareFootage',
+        y='price',
+        color='Status'
+    )
+    
+    st.divider()
+    
+    # --- Price Drop Leaderboard ---
     st.subheader("📉 Price Drop Leaderboard")
     st.markdown("Competitors who have slashed their asking price to attract buyers.")
     
     if 'originalPrice' in df_active.columns:
-        # Calculate drops
         df_active['Drop ($)'] = df_active['originalPrice'] - df_active['price']
         df_active['Drop (%)'] = (df_active['Drop ($)'] / df_active['originalPrice']) * 100
-        
-        # Filter for homes that actually dropped price
         drops_df = df_active[df_active['Drop ($)'] > 0].copy()
         
         if not drops_df.empty:
             drops_display = drops_df[['formattedAddress', 'originalPrice', 'price', 'Drop ($)', 'Drop (%)', 'daysOnMarket']].sort_values('Drop (%)', ascending=False)
-            
             st.dataframe(
                 drops_display,
                 column_config={
@@ -153,6 +173,32 @@ if not df_active.empty and not df_pending.empty:
     
     st.divider()
     
+    # --- NEW: HISTORICAL DATA UPLOADER ---
+    st.subheader("📅 Historical Year-over-Year Trends")
+    st.markdown("Download a free CSV from Realtor.com or Redfin and upload it here to visualize long-term market trends.")
+    
+    uploaded_file = st.file_uploader("Upload Historical CSV Data", type=["csv"])
+    if uploaded_file is not None:
+        try:
+            hist_df = pd.read_csv(uploaded_file)
+            st.success("Historical data loaded successfully!")
+            
+            # Interactive column selectors for the line chart
+            col_x, col_y = st.columns(2)
+            with col_x:
+                date_col = st.selectbox("Select Time Column (e.g., Month, Date)", hist_df.columns)
+            with col_y:
+                metric_col = st.selectbox("Select Metric to Chart (e.g., Median Price, Inventory)", hist_df.columns)
+            
+            if date_col and metric_col:
+                # Prepare data and plot the trend
+                chart_data = hist_df.set_index(date_col)[[metric_col]]
+                st.line_chart(chart_data)
+        except Exception as e:
+            st.error(f"Could not read the file. Please ensure it is a valid CSV. Error: {e}")
+
+    st.divider()
+
     st.subheader("Active Competitors")
     st.dataframe(df_active[['formattedAddress', 'price', 'price_per_sqft', 'daysOnMarket', 'bedrooms', 'squareFootage']].sort_values('price'))
     
